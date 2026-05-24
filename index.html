@@ -102,6 +102,11 @@
   .donor-chip.Gold,.donor-chip.gold { border-color:rgba(201,168,76,0.5); color:var(--gold-light); background:rgba(201,168,76,0.1); }
   .donor-chip.Silver,.donor-chip.silver { border-color:rgba(192,192,192,0.4); color:#ddd; background:rgba(192,192,192,0.06); }
 
+  /* CATEGORY BUTTONS */
+  .cat-btn { background:var(--white-faint); border:1px solid rgba(201,168,76,0.2); border-radius:20px; padding:10px 18px; font-family:'Cinzel',serif; font-size:0.65rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-light); cursor:pointer; transition:background 0.2s,border-color 0.2s,transform 0.15s; }
+  .cat-btn:hover { background:rgba(201,168,76,0.15); border-color:rgba(201,168,76,0.5); transform:translateY(-2px); }
+  .cat-btn-active { background:rgba(201,168,76,0.25); border-color:rgba(201,168,76,0.7); color:var(--white); }
+
   /* ANIMATIONS */
   @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
   @keyframes fadeIn { from{opacity:0} to{opacity:1} }
@@ -312,6 +317,51 @@ function fixPhotoUrl(url) {
   return url;
 }
 
+const FACULTY_CATEGORIES = [
+  'School Administration',
+  'Support Staff',
+  'Office Staff',
+  'Elementary Teachers',
+  'Middle School Teachers',
+  'Specialty Teachers',
+  'Church Staff'
+];
+
+function renderFacultyCategories(rows, activeCategory) {
+  const cats = FACULTY_CATEGORIES;
+  const catButtons = `
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:28px;">
+      <div class="cat-btn ${!activeCategory ? 'cat-btn-active' : ''}" onclick="showFacultyCategory(null)">All Staff</div>
+      ${cats.map(c => `<div class="cat-btn ${activeCategory===c ? 'cat-btn-active' : ''}" onclick="showFacultyCategory('${c}')">${c}</div>`).join('')}
+    </div>`;
+
+  const filtered = activeCategory ? rows.filter(r => (r.category||'').toLowerCase().trim() === activeCategory.toLowerCase().trim()) : rows;
+
+  const cards = filtered.length > 0
+    ? `<div class="cards-grid">${filtered.map((r, i) => {
+        const origIndex = rows.indexOf(r);
+        return `
+        <div class="card" onclick="openDetail('faculty', ${origIndex})">
+          <div class="card-img">
+            ${r.photo ? `<img src="${fixPhotoUrl(r.photo)}" alt="${r.name}" onerror="this.parentElement.innerHTML='👩‍🏫'">` : '👩‍🏫'}
+          </div>
+          <div class="card-body">
+            <div class="card-name">${r.name}</div>
+            <div class="card-meta">${r.meta || r.subject || ''}</div>
+            <div class="card-desc">${(r.description || r.bio || r.desc || '').substring(0,90)}…</div>
+          </div>
+        </div>`}).join('')}</div>`
+    : `<div class="error-state"><strong>No staff in this category yet.</strong></div>`;
+
+  return catButtons + cards;
+}
+
+function showFacultyCategory(category) {
+  fetchSheet(TABS['faculty']).then(rows => {
+    document.getElementById('section-body').innerHTML = renderFacultyCategories(rows, category);
+  });
+}
+
 function getDefaultIcon(key) {
   return {donors:'🕊️', sports:'🏆', academics:'🎓', faith:'✝️', faculty:'👩‍🏫', events:'📅', students:'⭐', store:'🛍️'}[key] || '⭐';
 }
@@ -342,6 +392,7 @@ async function openSection(key) {
     let html = '';
     if (key === 'donors') html = renderDonors(rows);
     else if (key === 'events') html = renderEvents(rows);
+    else if (key === 'faculty') html = renderFacultyCategories(rows);
     else html = renderCards(rows, key);
 
     document.getElementById('section-body').innerHTML = html;
